@@ -1,0 +1,802 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+</head>
+<body>
+<title>Daybook</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #ffffff;
+    --ink: #111111;
+    --muted: #686868;
+    --faint: #b9b9b9;
+    --line: #e2e2e2;
+    --soft: #f5f5f5;
+    --green: #15803d;
+    --green-hover: #116a32;
+    --green-soft: #e9f6ee;
+    --red: #d1343a;
+    --red-hover: #b02a2f;
+    --red-soft: #fdeced;
+    --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+    --body: "Figtree", "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { background: var(--bg); color: var(--ink); }
+  body { font-family: var(--body); font-size: 15px; line-height: 1.45; }
+  button, input, select { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+  .wrap { max-width: 1200px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 56px; }
+
+  /* Buttons: green = go / add / save, red = back / remove / cancel */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    border-radius: 8px; padding: 8px 14px; font-weight: 600; border: 1.5px solid transparent;
+    text-decoration: none; white-space: nowrap; line-height: 1.2; }
+  .btn-go { background: var(--green); border-color: var(--green); color: #fff; }
+  .btn-go:hover { background: var(--green-hover); border-color: var(--green-hover); }
+  .btn-go-o { background: var(--bg); border-color: var(--green); color: var(--green); }
+  .btn-go-o:hover { background: var(--green-soft); }
+  .btn-stop { background: var(--red); border-color: var(--red); color: #fff; }
+  .btn-stop:hover { background: var(--red-hover); border-color: var(--red-hover); }
+  .btn-stop-o { background: var(--bg); border-color: var(--red); color: var(--red); }
+  .btn-stop-o:hover { background: var(--red-soft); }
+  .btn-sm { padding: 5px 10px; font-size: 13px; border-radius: 6px; }
+  .icon-btn { width: 30px; height: 30px; padding: 0; border-radius: 50%; }
+
+  /* Header */
+  .top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px 24px; flex-wrap: wrap; }
+  .month { font-family: var(--display); font-size: clamp(38px, 7vw, 68px); font-weight: 800;
+    letter-spacing: -0.03em; line-height: 0.95; margin: 0; text-wrap: balance; }
+  .month .year { font-weight: 400; color: var(--muted); }
+  .now { margin-top: 8px; color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px; }
+  .now strong { color: var(--ink); font-weight: 600; }
+  .nav { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 350px; gap: 28px; margin-top: 22px; align-items: start; }
+  @media (max-width: 920px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+
+  /* Calendar grid */
+  .grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr));
+    border-top: 1.5px solid var(--ink); border-left: 1px solid var(--line); }
+  .dow { padding: 8px 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--muted); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .cell { position: relative; min-width: 0; min-height: 122px; padding: 6px; display: flex; flex-direction: column; gap: 5px;
+    border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); cursor: pointer; background: var(--bg); }
+  .cell:hover { background: var(--soft); }
+  .cell.selected { box-shadow: inset 0 0 0 2px var(--ink); }
+  .cell-top { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+  .daynum { width: 30px; height: 30px; border-radius: 50%; border: 0; background: none; padding: 0;
+    font-weight: 600; font-variant-numeric: tabular-nums; font-size: 14px; }
+  .cell.other .daynum { color: var(--faint); }
+  .cell.today .daynum { background: var(--ink); color: #fff; }
+  .todo-btn { width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid var(--green); color: var(--green);
+    background: var(--bg); display: grid; place-items: center; padding: 0; flex: none; }
+  .todo-btn svg { width: 14px; height: 14px; }
+  .todo-btn:hover { background: var(--green-soft); }
+  .todo-btn.has { background: var(--green); color: #fff; }
+  .todo-btn.done { font-size: 15px; line-height: 1; }
+  .cell.other .todo-btn { opacity: 0.45; }
+  .chips { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .chip { display: flex; align-items: center; gap: 4px; min-width: 0; font-size: 12px; font-weight: 500;
+    border-radius: 4px; padding: 2px 6px; }
+  .chip-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .chip-time { font-variant-numeric: tabular-nums; opacity: 0.8; flex: none; }
+  .more { font-size: 11px; color: var(--muted); padding-left: 2px; }
+  @media (max-width: 640px) {
+    .cell { min-height: 78px; padding: 3px; gap: 3px; }
+    .cell-top { flex-direction: column; align-items: flex-start; }
+    .daynum { width: 24px; height: 24px; font-size: 12px; }
+    .todo-btn { width: 20px; height: 20px; }
+    .todo-btn svg { width: 11px; height: 11px; }
+    .chips { flex-direction: row; flex-wrap: wrap; }
+    .chip { padding: 0 2px; font-size: 11px; }
+    .chip-text, .chip-time { display: none; }
+    .chip.no-emoji::before { content: ""; width: 8px; height: 8px; }
+    .dow { font-size: 10px; padding: 6px 2px; letter-spacing: 0.02em; }
+  }
+
+  /* Side panel */
+  .panel h2, .todo-head h2 { font-family: var(--display); font-weight: 700; font-size: 26px; letter-spacing: -0.02em;
+    margin: 0; line-height: 1.1; text-wrap: balance; }
+  .panel-sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .panel-actions { margin-top: 14px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .section-label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 22px 0 8px; }
+  .rem-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .rem { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 10px; align-items: start;
+    padding: 10px; border: 1px solid var(--line); border-radius: 10px; }
+  .rem.past { opacity: 0.6; }
+  .rem-emoji { width: 34px; height: 34px; border-radius: 8px; display: grid; place-items: center; font-size: 18px; }
+  .rem-title { font-weight: 600; overflow-wrap: anywhere; }
+  .rem-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 3px; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .tag { font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 999px; }
+  .rem-actions { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+  .empty { color: var(--muted); font-size: 14px; padding: 12px; border: 1px dashed var(--line); border-radius: 10px; }
+
+  form.card { display: flex; flex-direction: column; gap: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 12px; }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field > span { font-size: 12px; font-weight: 600; color: var(--muted); }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  input[type=text], input[type=date], input[type=time] { width: 100%; padding: 8px 10px; border: 1.5px solid var(--line);
+    border-radius: 8px; background: var(--bg); min-width: 0; }
+  input[type=text]:focus, input[type=date]:focus, input[type=time]:focus { border-color: var(--ink); outline: none; }
+  .swatches, .emojis { display: flex; flex-wrap: wrap; gap: 6px; }
+  .swatch { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--bg); box-shadow: 0 0 0 1px var(--line); padding: 0; }
+  .swatch[aria-pressed=true] { box-shadow: 0 0 0 2px var(--ink); }
+  .swatch-custom { position: relative; overflow: hidden; background: conic-gradient(#e53935, #fbc02d, #43a047, #1e88e5, #8e24aa, #e53935); }
+  .swatch-custom input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; border: 0; padding: 0; }
+  .emo { width: 34px; height: 34px; border-radius: 8px; border: 1.5px solid var(--line); background: var(--bg); font-size: 17px; padding: 0; }
+  .emo[aria-pressed=true] { border-color: var(--ink); background: var(--soft); }
+  .emo.none { font-size: 11px; color: var(--muted); }
+  .hint { font-size: 12.5px; color: var(--muted); }
+
+  /* To-do view */
+  .todo-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 18px; }
+  .todo-layout { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 28px; margin-top: 22px; align-items: start; }
+  @media (max-width: 820px) { .todo-layout { grid-template-columns: minmax(0, 1fr); } }
+  .list-pick { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .list-pick button { width: 100%; text-align: left; display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); }
+  .list-pick button[aria-current=true] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+  .list-pick .count { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; flex: none; }
+  .inline-form { display: flex; gap: 8px; }
+  .inline-form input { flex: 1; }
+
+  .sheet { border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+  .sheet-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+  .sheet-title { font-family: var(--display); font-size: 30px; font-weight: 700; letter-spacing: -0.02em; margin: 0; line-height: 1.1; overflow-wrap: anywhere; }
+  .progress { margin-top: 12px; height: 8px; background: var(--soft); border-radius: 99px; overflow: hidden; }
+  .progress > div { height: 100%; background: var(--green); transition: width 0.3s; }
+  .progress-label { font-size: 13px; color: var(--muted); margin-top: 6px; font-variant-numeric: tabular-nums; }
+  .items { list-style: none; margin: 16px 0; padding: 0; }
+  .item { display: flex; align-items: center; gap: 12px; padding: 10px 2px; border-bottom: 1px solid var(--line); }
+  .item label { flex: 1; display: flex; align-items: center; gap: 12px; cursor: pointer; min-width: 0; }
+  .item input[type=checkbox] { appearance: none; width: 22px; height: 22px; border: 2px solid var(--ink); border-radius: 6px; margin: 0;
+    display: grid; place-items: center; flex: none; cursor: pointer; background: var(--bg); }
+  .item input[type=checkbox]:checked { background: var(--green); border-color: var(--green); }
+  .item input[type=checkbox]:checked::after { content: ""; width: 6px; height: 11px; border: solid #fff; border-width: 0 2.5px 2.5px 0; transform: translateY(-1px) rotate(45deg); }
+  .item-text { overflow-wrap: anywhere; }
+  .item.done .item-text { text-decoration: line-through; color: var(--muted); }
+  .x { color: var(--red); background: none; border: 0; font-size: 20px; line-height: 1; padding: 2px 6px; border-radius: 6px; }
+  .x:hover { background: var(--red-soft); }
+  .smiley { text-align: center; padding: 22px 12px 10px; }
+  .smiley .face { font-size: 76px; line-height: 1; display: inline-block; animation: pop 0.5s ease-out; }
+  .smiley p { margin: 8px 0 0; font-weight: 600; font-size: 17px; }
+  @keyframes pop { 0% { transform: scale(0.4); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }
+  @media (prefers-reduced-motion: reduce) { .smiley .face { animation: none; } .progress > div { transition: none; } }
+  .confirm-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; }
+
+  .archive-wrap { overflow-x: auto; margin-top: 8px; }
+  table.archive { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 560px; }
+  .archive th { text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+    padding: 8px 10px; border-bottom: 1.5px solid var(--ink); }
+  .archive td { padding: 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .archive tr.clickable { cursor: pointer; }
+  .archive tr.clickable:hover td { background: var(--soft); }
+  .archive .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .archive .items-preview { color: var(--muted); overflow-wrap: anywhere; }
+
+  /* Alerts */
+  .alerts { position: fixed; top: calc(12px + env(safe-area-inset-top, 0px)); right: 16px; left: 16px; z-index: 20;
+    display: flex; flex-direction: column; align-items: flex-end; gap: 8px; pointer-events: none; }
+  .alert { pointer-events: auto; width: min(380px, 100%); background: var(--bg); border: 1.5px solid var(--ink); border-radius: 12px;
+    padding: 12px 14px; box-shadow: 0 8px 30px rgba(0,0,0,0.14); display: grid; grid-template-columns: 38px 1fr; gap: 12px; align-items: start; }
+  .alert .rem-emoji { width: 38px; height: 38px; }
+  .alert-title { font-weight: 700; }
+  .alert-sub { font-size: 13px; color: var(--muted); }
+  .alert .btn { margin-top: 8px; }
+  .alert.msg { grid-template-columns: 1fr; }
+
+  .foot { margin-top: 36px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--muted);
+    display: flex; gap: 8px 20px; flex-wrap: wrap; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+</style>
+
+<div class="alerts" id="alerts" aria-live="assertive"></div>
+
+<div class="wrap">
+  <main id="calendarView">
+    <div class="top">
+      <div>
+        <h1 class="month" id="monthTitle">October <span class="year">2026</span></h1>
+        <div class="now" id="nowLine"></div>
+      </div>
+      <div class="nav">
+        <button class="btn btn-go-o" id="prevBtn" aria-label="Previous month">&larr; Prev</button>
+        <button class="btn btn-go" id="todayBtn">Today</button>
+        <button class="btn btn-go-o" id="nextBtn" aria-label="Next month">Next &rarr;</button>
+      </div>
+    </div>
+
+    <div class="layout">
+      <div>
+        <div class="grid" id="grid" role="grid" aria-label="Month calendar"></div>
+      </div>
+
+      <aside class="panel" id="panel">
+        <h2 id="dayTitle"></h2>
+        <div class="panel-sub" id="daySub"></div>
+        <div class="panel-actions">
+          <button class="btn btn-go" id="openTodoBtn">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8.5l3.2 3L13 4.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            To-do lists for this day
+          </button>
+        </div>
+
+        <div class="section-label">Reminders</div>
+        <ul class="rem-list" id="remList"></ul>
+
+        <div class="section-label">New reminder</div>
+        <form class="card" id="remForm" autocomplete="off">
+          <label class="field"><span>What should we remind you about?</span>
+            <input type="text" id="remTitle" maxlength="120" placeholder="Call the dentist" required>
+          </label>
+          <div class="row2">
+            <label class="field"><span>Date</span><input type="date" id="remDate" required></label>
+            <label class="field"><span>Time</span><input type="time" id="remTime" required></label>
+          </div>
+          <label class="field"><span>Label</span>
+            <input type="text" id="remLabel" maxlength="30" placeholder="Health, School, Work…" list="labelOptions">
+            <datalist id="labelOptions"></datalist>
+          </label>
+          <div class="field"><span>Color</span><div class="swatches" id="swatches"></div></div>
+          <div class="field"><span>Emoji</span><div class="emojis" id="emojis"></div></div>
+          <button class="btn btn-go" type="submit">Add reminder</button>
+          <p class="hint" style="margin:0">An alert pops up on this page at the reminder time while it's open. Tap <strong>Send to phone</strong> on a reminder to add it to Google Calendar, which sends the notification to your phone.</p>
+        </form>
+      </aside>
+    </div>
+  </main>
+
+  <main id="todoView" hidden>
+    <div class="todo-head">
+      <button class="btn btn-stop-o" id="backBtn">&larr; Calendar</button>
+      <div>
+        <h2 id="todoTitle"></h2>
+        <div class="panel-sub" id="todoSub"></div>
+      </div>
+    </div>
+
+    <div class="todo-layout">
+      <div>
+        <div class="section-label" style="margin-top:0">Create a to-do list</div>
+        <form class="inline-form" id="newListForm" autocomplete="off">
+          <input type="text" id="newListName" maxlength="80" placeholder="List name, e.g. Groceries" required aria-label="New list name">
+          <button class="btn btn-go" type="submit">Create</button>
+        </form>
+        <div class="section-label">Lists for this day</div>
+        <ul class="list-pick" id="dayLists"></ul>
+      </div>
+
+      <div id="sheet"></div>
+    </div>
+
+    <div class="section-label" style="margin-top:36px">All saved lists</div>
+    <div class="archive-wrap" id="archive"></div>
+  </main>
+
+  <div class="foot">
+    <span id="saveStatus"><span class="dot" style="background:var(--faint)"></span>Connecting…</span>
+    <span id="tzLine"></span>
+  </div>
+</div>
+
+<script>
+(() => {
+  // ---------- helpers ----------
+  const $ = (id) => document.getElementById(id);
+  const pad = (n) => String(n).padStart(2, "0");
+  const keyOf = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const parseKey = (k) => { const [y, m, d] = k.split("-").map(Number); return new Date(y, m - 1, d); };
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const newId = (p) => p + "-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "your local time";
+  const fmtTime = (hhmm) => { const [h, m] = hhmm.split(":").map(Number); const d = new Date(2000, 0, 1, h, m);
+    return d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }); };
+  const fmtLong = (k) => parseKey(k).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+  const fmtShort = (k) => parseKey(k).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  const remTime = (r) => new Date(`${r.date}T${r.time}`).getTime();
+  function textOn(hex) {
+    const h = (hex || "#888888").replace("#", "");
+    const [r, g, b] = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.4 ? "#111111" : "#ffffff";
+  }
+  function tint(hex, a) {
+    const h = (hex || "#888888").replace("#", "");
+    const [r, g, b] = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16));
+    return `rgba(${r},${g},${b},${a})`;
+  }
+  function gcalLink(r) {
+    const start = new Date(`${r.date}T${r.time}`);
+    const end = new Date(start.getTime() + 30 * 60000);
+    const f = (d) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+    const title = (r.emoji ? r.emoji + " " : "") + r.title;
+    const details = r.label ? `Label: ${r.label}` : "Reminder from Daybook";
+    return "https://calendar.google.com/calendar/render?action=TEMPLATE&text=" + encodeURIComponent(title) +
+      "&dates=" + f(start) + "/" + f(end) + "&details=" + encodeURIComponent(details) + "&ctz=" + encodeURIComponent(tz);
+  }
+
+  const COLORS = ["#e53935", "#fb8c00", "#fdd835", "#43a047", "#00897b", "#1e88e5", "#5e35b1", "#d81b60", "#6d4c41", "#111111"];
+  const EMOJIS = ["⏰", "📌", "💊", "🎂", "📚", "💼", "🏋️", "🛒", "📞", "✈️", "🍽️", "💡", "❤️", "🎉", "🐶", "🧹"];
+
+  // ---------- state ----------
+  const today = new Date();
+  const state = {
+    docs: new Map(),        // id -> data (reminders + lists)
+    ready: false,
+    cursor: new Date(today.getFullYear(), today.getMonth(), 1),
+    selected: keyOf(today),
+    view: "calendar",
+    todoDate: keyOf(today),
+    openListId: null,
+    confirmDelete: null,
+    color: COLORS[5],
+    emoji: "⏰",
+    mode: "connecting",     // "cloud" | "local"
+  };
+  const reminders = () => [...state.docs].filter(([, d]) => d.kind === "reminder").map(([id, d]) => ({ id, ...d }));
+  const lists = () => [...state.docs].filter(([, d]) => d.kind === "list").map(([id, d]) => ({ id, ...d }));
+
+  // ---------- storage ----------
+  const LS_KEY = "daybook-v1";
+  let col = null;
+  const pending = new Map();
+  const busy = new Set();
+
+  function loadLocal() {
+    try { const raw = localStorage.getItem(LS_KEY); if (raw) state.docs = new Map(Object.entries(JSON.parse(raw))); } catch (e) {}
+  }
+  function saveLocal() {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(Object.fromEntries(state.docs))); } catch (e) {}
+  }
+
+  async function put(id, data) {
+    if (data === null) state.docs.delete(id); else state.docs.set(id, data);
+    renderAll();
+    if (state.mode !== "cloud") { saveLocal(); return; }
+    pending.set(id, data);
+    if (busy.has(id)) return;
+    busy.add(id);
+    try {
+      while (pending.has(id)) {
+        const d = pending.get(id);
+        pending.delete(id);
+        try {
+          if (d === null) await col.doc(id).delete(); else await col.doc(id).set(d);
+        } catch (e) {
+          if (e && e.code === "unavailable") {
+            await new Promise((r) => setTimeout(r, 600 + Math.random() * 800));
+            if (!pending.has(id)) pending.set(id, d);
+            continue;
+          }
+          writeError(e);
+        }
+      }
+    } finally { busy.delete(id); }
+  }
+  function writeError(e) {
+    const code = e && e.code;
+    if (code === "quota_exceeded") showMsg("Storage is full. Delete some old lists or reminders, then try again.");
+    else if (code === "invalid_argument") showMsg("Changes can't be saved from this view. You may only have permission to look at this calendar.");
+    else showMsg("That change didn't save. Check your connection and try again.");
+  }
+
+  function setStatus() {
+    const el = $("saveStatus");
+    if (state.mode === "cloud") el.innerHTML = '<span class="dot" style="background:var(--green)"></span>Saved to your account, available on every device you sign in on';
+    else if (state.mode === "local") el.innerHTML = '<span class="dot" style="background:var(--red)"></span>Saved in this browser only. Sign in to Claude to keep your calendar everywhere';
+  }
+
+  async function connect() {
+    let db = null, uid = null;
+    try {
+      if (window.claude && window.claude.use) {
+        const user = await window.claude.use("user");
+        uid = user ? await user.id() : null;
+        db = uid ? await window.claude.use("db") : null;
+      }
+    } catch (e) { db = null; }
+    if (!db || !uid) {
+      state.mode = "local";
+      loadLocal();
+      state.ready = true;
+      setStatus(); renderAll(); checkDue();
+      return;
+    }
+    state.mode = "cloud";
+    setStatus();
+    col = db.collection("data/users/" + uid);
+    col.onSnapshot((snap) => {
+      const next = new Map();
+      for (const d of snap.docs) next.set(d.id, d.data());
+      for (const [id, d] of pending) { if (d === null) next.delete(id); else next.set(id, d); }
+      state.docs = next;
+      state.ready = true;
+      renderAll();
+      checkDue();
+    }, () => {
+      showMsg("Lost the connection to your saved calendar. Reload the page to reconnect.");
+    });
+  }
+
+  // ---------- alerts ----------
+  let audio = null;
+  document.addEventListener("pointerdown", () => {
+    if (!audio) { try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+  }, { once: true });
+  function chime() {
+    if (!audio) return;
+    try {
+      const t = audio.currentTime;
+      [880, 1175].forEach((f, i) => {
+        const o = audio.createOscillator(), g = audio.createGain();
+        o.frequency.value = f; o.type = "sine";
+        g.gain.setValueAtTime(0.0001, t + i * 0.18);
+        g.gain.exponentialRampToValueAtTime(0.25, t + i * 0.18 + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.18 + 0.5);
+        o.connect(g).connect(audio.destination); o.start(t + i * 0.18); o.stop(t + i * 0.18 + 0.55);
+      });
+    } catch (e) {}
+  }
+  function showAlert(r) {
+    const el = document.createElement("div");
+    el.className = "alert";
+    el.setAttribute("role", "alert");
+    el.innerHTML = `<div class="rem-emoji" style="background:${tint(r.color, 0.18)}">${esc(r.emoji || "⏰")}</div>
+      <div><div class="alert-title">${esc(r.title)}</div>
+      <div class="alert-sub">${esc(fmtTime(r.time))}${r.label ? " · " + esc(r.label) : ""}</div>
+      <button class="btn btn-stop btn-sm" type="button">Dismiss</button></div>`;
+    el.querySelector("button").onclick = () => el.remove();
+    $("alerts").appendChild(el);
+    chime();
+  }
+  function showMsg(text) {
+    const el = document.createElement("div");
+    el.className = "alert msg";
+    el.setAttribute("role", "status");
+    el.innerHTML = `<div><div>${esc(text)}</div><button class="btn btn-stop btn-sm" type="button">Dismiss</button></div>`;
+    el.querySelector("button").onclick = () => el.remove();
+    $("alerts").appendChild(el);
+    setTimeout(() => el.remove(), 9000);
+  }
+  function checkDue() {
+    if (!state.ready) return;
+    const now = Date.now();
+    for (const r of reminders()) {
+      if (r.notified) continue;
+      const t = remTime(r);
+      if (isNaN(t) || t > now) continue;
+      if (now - t < 60 * 60000) showAlert(r);
+      const { id, ...data } = r;
+      put(id, { ...data, notified: true });
+    }
+  }
+
+  // ---------- calendar render ----------
+  function renderClock() {
+    const now = new Date();
+    $("nowLine").innerHTML = `<strong>${esc(now.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" }))}</strong> · ${esc(now.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }))}`;
+    $("tzLine").textContent = "Times shown in " + tz.replace(/_/g, " ");
+  }
+
+  function listsByDate() {
+    const m = new Map();
+    for (const l of lists()) { if (!m.has(l.date)) m.set(l.date, []); m.get(l.date).push(l); }
+    return m;
+  }
+  function remsByDate() {
+    const m = new Map();
+    for (const r of reminders().sort((a, b) => (a.time > b.time ? 1 : -1))) {
+      if (!m.has(r.date)) m.set(r.date, []); m.get(r.date).push(r);
+    }
+    return m;
+  }
+  const isComplete = (l) => l.items && l.items.length > 0 && l.items.every((i) => i.done);
+
+  function renderGrid() {
+    const c = state.cursor;
+    const monthName = c.toLocaleDateString(undefined, { month: "long" });
+    $("monthTitle").innerHTML = `${esc(monthName)} <span class="year">${c.getFullYear()}</span>`;
+    const grid = $("grid");
+    const frag = document.createDocumentFragment();
+    const base = new Date(2023, 0, 1); // a Sunday
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(base); d.setDate(1 + i);
+      const h = document.createElement("div");
+      h.className = "dow"; h.setAttribute("role", "columnheader");
+      h.textContent = d.toLocaleDateString(undefined, { weekday: "short" });
+      frag.appendChild(h);
+    }
+    const first = new Date(c.getFullYear(), c.getMonth(), 1);
+    const start = new Date(first); start.setDate(1 - first.getDay());
+    const lastDay = new Date(c.getFullYear(), c.getMonth() + 1, 0);
+    const weeks = Math.ceil((first.getDay() + lastDay.getDate()) / 7);
+    const rems = remsByDate(), lbd = listsByDate(), todayKey = keyOf(new Date());
+    for (let i = 0; i < weeks * 7; i++) {
+      const d = new Date(start); d.setDate(start.getDate() + i);
+      const k = keyOf(d);
+      const cell = document.createElement("div");
+      cell.className = "cell" + (d.getMonth() !== c.getMonth() ? " other" : "") + (k === todayKey ? " today" : "") + (k === state.selected ? " selected" : "");
+      cell.setAttribute("role", "gridcell");
+      cell.dataset.key = k;
+      const dayLists = lbd.get(k) || [];
+      const allDone = dayLists.length > 0 && dayLists.every(isComplete);
+      const label = d.toLocaleDateString(undefined, { month: "long", day: "numeric" });
+      const todoInner = allDone ? "😊" : '<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8.5l3.2 3L13 4.5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      let html = `<div class="cell-top"><button class="daynum" type="button" aria-label="${esc(label)}" aria-pressed="${k === state.selected}">${d.getDate()}</button>
+        <button class="todo-btn${dayLists.length ? " has" : ""}${allDone ? " done" : ""}" type="button" data-todo="${k}"
+          aria-label="To-do lists for ${esc(label)}${dayLists.length ? ` (${dayLists.length})` : ""}" title="To-do lists">${todoInner}</button></div>`;
+      const dr = rems.get(k) || [];
+      if (dr.length) {
+        html += '<div class="chips">';
+        dr.slice(0, 3).forEach((r) => {
+          html += `<div class="chip${r.emoji ? "" : " no-emoji"}" style="background:${esc(r.color)};color:${textOn(r.color)}" title="${esc(fmtTime(r.time) + " " + r.title)}">
+            ${r.emoji ? `<span aria-hidden="true">${esc(r.emoji)}</span>` : ""}<span class="chip-time">${esc(fmtTime(r.time).replace(/\s?([AP]M)/i, (m, p) => p[0].toLowerCase()))}</span><span class="chip-text">${esc(r.title)}</span></div>`;
+        });
+        if (dr.length > 3) html += `<div class="more">+${dr.length - 3} more</div>`;
+        html += "</div>";
+      }
+      cell.innerHTML = html;
+      frag.appendChild(cell);
+    }
+    grid.replaceChildren(frag);
+  }
+
+  function renderPanel() {
+    const k = state.selected;
+    $("dayTitle").textContent = fmtLong(k);
+    const dr = remsByDate().get(k) || [];
+    const dl = listsByDate().get(k) || [];
+    const bits = [];
+    bits.push(dr.length === 1 ? "1 reminder" : `${dr.length} reminders`);
+    bits.push(dl.length === 1 ? "1 to-do list" : `${dl.length} to-do lists`);
+    $("daySub").textContent = bits.join(" · ");
+    const ul = $("remList");
+    if (!dr.length) {
+      ul.innerHTML = `<li class="empty">${state.ready ? "Nothing scheduled. Add a reminder below." : "Loading your reminders…"}</li>`;
+    } else {
+      const now = Date.now();
+      ul.innerHTML = dr.map((r) => `
+        <li class="rem${remTime(r) < now ? " past" : ""}">
+          <div class="rem-emoji" style="background:${tint(r.color, 0.18)}">${esc(r.emoji || "⏰")}</div>
+          <div>
+            <div class="rem-title">${esc(r.title)}</div>
+            <div class="rem-meta"><span>${esc(fmtTime(r.time))}</span>${r.label ? `<span class="tag" style="background:${esc(r.color)};color:${textOn(r.color)}">${esc(r.label)}</span>` : ""}</div>
+          </div>
+          <div class="rem-actions">
+            <a class="btn btn-go-o btn-sm" href="${esc(gcalLink(r))}" target="_blank" rel="noopener">Send to phone</a>
+            <button class="btn btn-stop-o btn-sm" type="button" data-del-rem="${esc(r.id)}">Remove</button>
+          </div>
+        </li>`).join("");
+    }
+    const labels = [...new Set(reminders().map((r) => r.label).filter(Boolean))];
+    $("labelOptions").innerHTML = labels.map((l) => `<option value="${esc(l)}"></option>`).join("");
+  }
+
+  function renderPickers() {
+    const sw = $("swatches");
+    const custom = !COLORS.includes(state.color);
+    sw.innerHTML = COLORS.map((c) => `<button type="button" class="swatch" style="background:${c}" data-color="${c}" aria-label="Color ${c}" aria-pressed="${state.color === c}"></button>`).join("") +
+      `<label class="swatch swatch-custom" aria-pressed="${custom}" title="Pick any color" ${custom ? `style="background:${esc(state.color)}"` : ""}><input type="color" id="customColor" value="${esc(custom ? state.color : "#ff7043")}" aria-label="Pick any color"></label>`;
+    $("emojis").innerHTML = EMOJIS.map((e) => `<button type="button" class="emo" data-emoji="${e}" aria-pressed="${state.emoji === e}" aria-label="Emoji ${e}">${e}</button>`).join("") +
+      `<button type="button" class="emo none" data-emoji="" aria-pressed="${state.emoji === ""}">None</button>`;
+  }
+
+  // ---------- to-do render ----------
+  function renderTodo() {
+    const k = state.todoDate;
+    $("todoTitle").textContent = "To-do lists · " + fmtLong(k);
+    const dl = (listsByDate().get(k) || []).sort((a, b) => a.created - b.created);
+    $("todoSub").textContent = dl.length ? `${dl.length} ${dl.length === 1 ? "list" : "lists"} for this day` : "No lists for this day yet";
+    if (state.openListId && !state.docs.has(state.openListId)) state.openListId = null;
+    if (!state.openListId && dl.length) state.openListId = dl[dl.length - 1].id;
+
+    $("dayLists").innerHTML = dl.length ? dl.map((l) => {
+      const n = l.items.length, f = l.items.filter((i) => i.done).length;
+      return `<li><button type="button" data-open-list="${esc(l.id)}" aria-current="${l.id === state.openListId}">
+        <span class="rem-title">${esc(l.name)}</span><span class="count">${isComplete(l) ? "😊 " : ""}${f}/${n}</span></button></li>`;
+    }).join("") : `<li class="empty">Create a list above to get started.</li>`;
+
+    const sheet = $("sheet");
+    const l = state.openListId ? { id: state.openListId, ...state.docs.get(state.openListId) } : null;
+    if (!l) {
+      sheet.innerHTML = `<div class="sheet"><p class="sheet-title" style="font-size:22px">No list open</p>
+        <p class="hint">Give your list a name on the left and press Create. You can add items, check them off, and every list is saved for later.</p></div>`;
+    } else {
+      const n = l.items.length, f = l.items.filter((i) => i.done).length;
+      const pct = n ? Math.round((f / n) * 100) : 0;
+      const confirming = state.confirmDelete === l.id;
+      sheet.innerHTML = `<div class="sheet">
+        <div class="sheet-head">
+          <h3 class="sheet-title">${esc(l.name)}</h3>
+          ${confirming
+            ? `<div class="confirm-row"><span>Delete this list?</span><button class="btn btn-stop btn-sm" type="button" data-confirm-del="${esc(l.id)}">Delete</button><button class="btn btn-go-o btn-sm" type="button" data-cancel-del>Keep</button></div>`
+            : `<button class="btn btn-stop-o btn-sm" type="button" data-ask-del="${esc(l.id)}">Delete list</button>`}
+        </div>
+        <div class="progress" aria-hidden="true"><div style="width:${pct}%"></div></div>
+        <div class="progress-label">${f} of ${n} ${n === 1 ? "item" : "items"} done</div>
+        ${isComplete(l) ? `<div class="smiley"><span class="face" role="img" aria-label="Smiley face">😊</span><p>Everything's done. Nice work!</p></div>` : ""}
+        <ul class="items">${l.items.map((it) => `
+          <li class="item${it.done ? " done" : ""}">
+            <label><input type="checkbox" data-toggle="${esc(it.id)}" ${it.done ? "checked" : ""}><span class="item-text">${esc(it.text)}</span></label>
+            <button class="x" type="button" data-del-item="${esc(it.id)}" aria-label="Remove ${esc(it.text)}">&times;</button>
+          </li>`).join("")}</ul>
+        <form class="inline-form" id="addItemForm" autocomplete="off">
+          <input type="text" id="newItemText" maxlength="160" placeholder="Add an item" required aria-label="New item">
+          <button class="btn btn-go" type="submit">Add</button>
+        </form>
+      </div>`;
+    }
+    renderArchive();
+  }
+
+  function renderArchive() {
+    const all = lists().sort((a, b) => (a.date === b.date ? b.created - a.created : a.date < b.date ? 1 : -1));
+    if (!all.length) {
+      $("archive").innerHTML = `<div class="empty">${state.ready ? "Lists you create on any day are saved here with their items and progress." : "Loading saved lists…"}</div>`;
+      return;
+    }
+    $("archive").innerHTML = `<table class="archive"><thead><tr><th>List</th><th>Date</th><th>Items</th><th>Finished</th></tr></thead><tbody>${
+      all.map((l) => {
+        const n = l.items.length, f = l.items.filter((i) => i.done).length;
+        return `<tr class="clickable" data-open-list="${esc(l.id)}" data-date="${esc(l.date)}" tabindex="0">
+          <td class="rem-title">${esc(l.name)}</td>
+          <td class="num">${esc(fmtShort(l.date))}</td>
+          <td class="items-preview">${n ? esc(l.items.map((i) => i.text).join(", ")) : "No items yet"}</td>
+          <td class="num">${f}/${n}${isComplete(l) ? " 😊" : ""}</td></tr>`;
+      }).join("")}</tbody></table>`;
+  }
+
+  function renderAll() {
+    if (state.view === "calendar") { renderGrid(); renderPanel(); }
+    else renderTodo();
+  }
+
+  function setView(v) {
+    state.view = v;
+    $("calendarView").hidden = v !== "calendar";
+    $("todoView").hidden = v !== "todo";
+    state.confirmDelete = null;
+    renderAll();
+    window.scrollTo(0, 0);
+  }
+  function openTodo(k) { state.todoDate = k; state.openListId = null; setView("todo"); }
+
+  // ---------- events ----------
+  $("prevBtn").onclick = () => { state.cursor = new Date(state.cursor.getFullYear(), state.cursor.getMonth() - 1, 1); renderGrid(); };
+  $("nextBtn").onclick = () => { state.cursor = new Date(state.cursor.getFullYear(), state.cursor.getMonth() + 1, 1); renderGrid(); };
+  $("todayBtn").onclick = () => { const t = new Date(); state.cursor = new Date(t.getFullYear(), t.getMonth(), 1); selectDay(keyOf(t)); };
+  $("openTodoBtn").onclick = () => openTodo(state.selected);
+  $("backBtn").onclick = () => setView("calendar");
+
+  function selectDay(k) {
+    state.selected = k;
+    const d = parseKey(k);
+    if (d.getMonth() !== state.cursor.getMonth() || d.getFullYear() !== state.cursor.getFullYear()) state.cursor = new Date(d.getFullYear(), d.getMonth(), 1);
+    $("remDate").value = k;
+    renderGrid(); renderPanel();
+  }
+
+  $("grid").addEventListener("click", (e) => {
+    const t = e.target.closest("[data-todo]");
+    if (t) { openTodo(t.dataset.todo); return; }
+    const cell = e.target.closest(".cell");
+    if (cell) {
+      selectDay(cell.dataset.key);
+      if (window.matchMedia("(max-width: 920px)").matches) $("panel").scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  });
+
+  $("remList").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-del-rem]");
+    if (b) put(b.dataset.delRem, null);
+  });
+
+  $("swatches").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-color]");
+    if (b) { state.color = b.dataset.color; renderPickers(); }
+  });
+  $("swatches").addEventListener("input", (e) => {
+    if (e.target.id === "customColor") {
+      state.color = e.target.value;
+      const lab = e.target.parentElement;
+      lab.style.background = state.color; lab.setAttribute("aria-pressed", "true");
+      $("swatches").querySelectorAll("[data-color]").forEach((s) => s.setAttribute("aria-pressed", "false"));
+    }
+  });
+  $("emojis").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-emoji]");
+    if (b) { state.emoji = b.dataset.emoji; renderPickers(); }
+  });
+
+  $("remForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const title = $("remTitle").value.trim();
+    const date = $("remDate").value, time = $("remTime").value;
+    if (!title || !date || !time) return;
+    const data = { kind: "reminder", title, date, time, label: $("remLabel").value.trim(), color: state.color,
+      emoji: state.emoji, notified: false, created: Date.now() };
+    $("remTitle").value = ""; $("remLabel").value = "";
+    state.selected = date;
+    const d = parseKey(date);
+    state.cursor = new Date(d.getFullYear(), d.getMonth(), 1);
+    put(newId("r"), data);
+  });
+
+  $("newListForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const name = $("newListName").value.trim();
+    if (!name) return;
+    const id = newId("l");
+    $("newListName").value = "";
+    state.openListId = id;
+    put(id, { kind: "list", name, date: state.todoDate, items: [], finished: 0, created: Date.now(), updated: Date.now() });
+    setTimeout(() => { const i = $("newItemText"); if (i) i.focus(); }, 0);
+  });
+
+  function editList(id, fn) {
+    const cur = state.docs.get(id);
+    if (!cur) return;
+    const copy = JSON.parse(JSON.stringify(cur));
+    fn(copy);
+    copy.finished = copy.items.filter((i) => i.done).length;
+    copy.updated = Date.now();
+    put(id, copy);
+  }
+
+  $("todoView").addEventListener("click", (e) => {
+    const open = e.target.closest("[data-open-list]");
+    if (open) {
+      state.openListId = open.dataset.openList;
+      if (open.dataset.date) state.todoDate = open.dataset.date;
+      state.confirmDelete = null;
+      renderTodo();
+      if (open.dataset.date) $("sheet").scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+    const delItem = e.target.closest("[data-del-item]");
+    if (delItem) { const iid = delItem.dataset.delItem; editList(state.openListId, (l) => { l.items = l.items.filter((i) => i.id !== iid); }); return; }
+    const ask = e.target.closest("[data-ask-del]");
+    if (ask) { state.confirmDelete = ask.dataset.askDel; renderTodo(); return; }
+    if (e.target.closest("[data-cancel-del]")) { state.confirmDelete = null; renderTodo(); return; }
+    const conf = e.target.closest("[data-confirm-del]");
+    if (conf) { state.confirmDelete = null; state.openListId = null; put(conf.dataset.confirmDel, null); }
+  });
+  $("todoView").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && e.target.matches("tr[data-open-list]")) e.target.click();
+  });
+  $("todoView").addEventListener("change", (e) => {
+    const t = e.target.closest("[data-toggle]");
+    if (t) { const iid = t.dataset.toggle; editList(state.openListId, (l) => { const it = l.items.find((i) => i.id === iid); if (it) it.done = t.checked; }); }
+  });
+  $("todoView").addEventListener("submit", (e) => {
+    if (e.target.id !== "addItemForm") return;
+    e.preventDefault();
+    const text = $("newItemText").value.trim();
+    if (!text) return;
+    editList(state.openListId, (l) => { l.items.push({ id: newId("i"), text, done: false }); });
+    setTimeout(() => { const i = $("newItemText"); if (i) i.focus(); }, 0);
+  });
+
+  // ---------- start ----------
+  $("remDate").value = state.selected;
+  const nextHour = new Date(Date.now() + 60 * 60000);
+  $("remTime").value = `${pad(nextHour.getHours())}:00`;
+  renderPickers();
+  renderClock();
+  renderAll();
+  setInterval(() => { renderClock(); checkDue(); }, 15000);
+  connect();
+})();
+</script>
+
+</body>
+</html>
